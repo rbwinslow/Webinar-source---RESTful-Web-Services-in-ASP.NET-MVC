@@ -1,0 +1,72 @@
+﻿
+@model Demo.Models.Account
+
+@{
+    ViewBag.Title = "Show";
+}
+
+<h1>User: @Model.User.Name</h1>
+<h2>Account: @Model.AccountInfo.Name</h2>
+
+<div class='section' id='newTransactionContainer'>
+   <table>
+      <tr>
+         <td><label for="ToFromField">To/From:</label></td>
+         <td><input type="text" id="ToFromField" /></td>
+      </tr>
+      <tr>
+         <td><label for="AmountField">Amount:</label></td>
+         <td><input type="text" id="AmountField" /></td>
+      </tr>
+      <tr>
+         <td><label for="NotesField">Notes:</label></td>
+         <td><input type="text" id="NotesField" /></td>
+      </tr>
+      <tr>
+         <td><input type="button" value="Add New Transaction" onclick="addNewTransaction()"/></td>
+      </tr>
+   </table>
+</div>
+<div class='section' id='transactionsTableContainer'></div>
+
+<script type="text/javascript">
+
+   var refreshTransactions = function() {
+      $.ajax({
+         type: 'GET',
+         url: 'Transactions',
+         dataType: 'json',
+         success: function (transactions) {
+            var table = '<table><tr><th>To/From</th><th>Amount</th><th>Notes</th></tr>';
+
+            $.each(transactions, function (index, transaction) {
+               table += '<tr><td>' + transaction.CounterParty + '</td><td>' +
+               (transaction.AmountInPennies / 100).toFixed(2) + '</td><td>' +
+               transaction.Notes + '</td></tr>';
+            });
+
+            table += '</table>';
+
+            $('div[id="transactionsTableContainer"]').empty().append(table);
+         }
+      });
+   };
+
+   var addNewTransaction = function () {
+      var transaction = {
+         CounterParty: $('input[id="ToFromField"]').attr('value'),
+         AmountInPennies: Math.round($('input[id="AmountField"]').attr('value') * 100),
+         Notes: $('input[id="NotesField"]').attr('value')
+      };
+
+      $.ajax({
+         type: 'POST',
+         url: 'Transactions',
+         data: transaction,
+         dataType: 'json',
+         success: refreshTransactions
+      });
+   };
+
+   refreshTransactions();
+</script>

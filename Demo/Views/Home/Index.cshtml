@@ -1,0 +1,132 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+
+<select class='user-combo' onchange='onUserSelected()'>
+   <option>Fetching user list...</option>
+</select>
+
+<div class='section' id='userFieldsContainer'></div>
+<div class='section' id='accountsTableContainer'></div>
+
+<script type='text/javascript'>
+   var userId = 0;
+
+   var getUserUrl = function () {
+      return 'Users/' + userId + '/';
+   };
+
+   var fillComboWithUsers = function(users)
+   {
+      var combo = $('.user-combo')
+         .empty()
+         .append('<option value="prompt" selected="selected">Choose a user</option>');
+      
+      $.each(users, function (index, user) {
+         combo.append('<option value="' + user.Id + '">' + user.Name + '</option>');
+      });
+   };
+
+   var refreshUserCombo = function () {
+      $.ajax({
+         type: 'GET',
+         url: 'Users',
+         dataType: 'json',
+         success: fillComboWithUsers
+      });
+   };
+
+   var makeTableFromAccounts = function (accounts)
+   {
+      var table = '<table><tr><th>Account Name</th><th>Balance</th><th>Actions</th></tr>';
+
+      $.each(accounts, function (index, account) {
+         table += '<tr><td><a href="' + getUserUrl() + 'Accounts/' + account.Id + '/">' + account.Name + '</a></td>' +
+                  '<td>' + (account.BalanceInPennies / 100).toFixed(2) + '</td>' +
+                  '<td><input type="button" value="Delete" onclick="deleteAccount(' + account.Id + ')" /></td></tr>';
+      });
+
+      table += '</table>';
+
+      $('div[id="accountsTableContainer"]').empty().append(table);
+   };
+
+   var makeUserFieldsFromUser = function (user) {
+      var fields = '<table>' +
+         '<tr><td><label for="NameField">Name:</label></td><td><input type="text" id="NameField" value="' + user.Name + '" /></td></tr>' +
+         '<tr><td><label for="EmailField">E-mail Address:</label></td><td><input type="text" id="EmailField" value="' + user.Email + '" /></td></tr>' +
+         '<tr><td><input type="button" value="Update" onclick="updateUser()" /></td><td class="field-validation-error"></td></tr>' +
+         '</table>';
+
+      $('div[id="userFieldsContainer"]').empty().append(fields);
+   };
+
+   var onUserUpdated = function (user) {
+      makeUserFieldsFromUser(user);
+   };
+
+   var onUserUpdateFailed = function (xhr) {
+      var errorCell = $('td[class*="field-validation-error"]');
+      errorCell.empty();
+      switch (xhr.status) {
+         case 400:
+            errorCell.append('E-mail address is invalid.');
+            break;
+
+         case 409:
+            errorCell.append('Name or E-mail address conflicts with another user.');
+            break;
+      }
+   };
+
+   var onUserSelected = function () {
+      var id = $('.user-combo').attr('value');
+      if (id != 'prompt') {
+         userId = id;
+
+         $.ajax({
+            type: 'GET',
+            url: getUserUrl(),
+            dataType: 'json',
+            success: onUserUpdated
+         });
+         
+         $.ajax({
+            type: 'GET',
+            url: getUserUrl() + 'Accounts',
+            dataType: 'json',
+            success: makeTableFromAccounts
+         });
+      }
+   };
+
+   var updateUser = function () {
+      var user = {
+         Name: $('input[id="NameField"]').attr('value'),
+         Email: $('input[id="EmailField"]').attr('value')
+      };
+
+      $.ajax({
+         type: 'PUT',
+         url: getUserUrl(),
+         data: user,
+         dataType: 'json',
+         success: onUserUpdated,
+         error: onUserUpdateFailed
+      });
+   };
+
+   var deleteAccount = function (accountId) {
+      $.ajax({
+         type: 'DELETE',
+         url: getUserUrl() + 'Accounts/' + accountId,
+         dataType: 'json',
+         success: function (data) {
+            alert('Success!');
+            onUserSelected();
+         }
+      });
+   };
+
+   refreshUserCombo();
+</script>
